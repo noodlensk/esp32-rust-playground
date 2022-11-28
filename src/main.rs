@@ -1,3 +1,4 @@
+#![deny(clippy::all)]
 extern crate core;
 
 mod faces;

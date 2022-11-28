@@ -9,7 +9,7 @@ insert_final_newline = true
 max_line_length = 120
 tab_width = 4
 
-[*.go]
+[*.rs]
 indent_style = tab
 
 [{*.bash, *.sh, *.zsh}]

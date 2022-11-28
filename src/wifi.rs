@@ -2,11 +2,13 @@ use esp_idf_sys::*;
 use ieee80211::*;
 use std::collections::HashMap;
 
+#[allow(dead_code)]
 struct NetworkInfo {
     ssid: &'static str,
     mac: MacAddress,
 }
 
+#[allow(dead_code)]
 pub struct WiFi {
     channel: u8,
     known_networks: HashMap<&'static str, NetworkInfo>,
@@ -64,23 +66,21 @@ impl WiFi {
 
         self.set_channel(self.channel);
 
-        self.channel = self.channel + 1;
+        self.channel += 1;
     }
 }
-
+#[allow(non_upper_case_globals)]
 pub extern "C" fn pkg_callback(buf: *mut c_types::c_void, type_: wifi_promiscuous_pkt_type_t) {
-    let mut pkg_type = "";
-
-    match type_ {
-        wifi_promiscuous_pkt_type_t_WIFI_PKT_MGMT => pkg_type = "MGMT",
-        wifi_promiscuous_pkt_type_t_WIFI_PKT_CTRL => pkg_type = "CTRL",
-        wifi_promiscuous_pkt_type_t_WIFI_PKT_MISC => pkg_type = "MISC",
-        wifi_promiscuous_pkt_type_t_WIFI_PKT_DATA => pkg_type = "DATA",
+    let pkg_type = match type_ {
+        wifi_promiscuous_pkt_type_t_WIFI_PKT_MGMT => "MGMT",
+        wifi_promiscuous_pkt_type_t_WIFI_PKT_CTRL => "CTRL",
+        wifi_promiscuous_pkt_type_t_WIFI_PKT_MISC => "MISC",
+        wifi_promiscuous_pkt_type_t_WIFI_PKT_DATA => "DATA",
         _ => unreachable!(),
-    }
+    };
 
     let pkt_data: &mut wifi_promiscuous_pkt_t =
-        unsafe { &mut *(buf as *mut wifi_promiscuous_pkt_t) };
+        unsafe { &mut *buf.cast::<wifi_promiscuous_pkt_t>() };
 
     if pkt_data.rx_ctrl.rx_state() != 0 {
         println!("Broken pkg, ignoring");
@@ -89,7 +89,7 @@ pub extern "C" fn pkg_callback(buf: *mut c_types::c_void, type_: wifi_promiscuou
     }
 
     let mut pkt_length = pkt_data.rx_ctrl.sig_len() as usize;
-    pkt_length = pkt_length - 4; // fix for https://github.com/espressif/esp-idf/issues/886
+    pkt_length -= 4; // fix for https://github.com/espressif/esp-idf/issues/886
 
     let data = unsafe { pkt_data.payload.as_slice(pkt_length) };
     let frame = Frame::new(data);
@@ -105,36 +105,38 @@ pub extern "C" fn pkg_callback(buf: *mut c_types::c_void, type_: wifi_promiscuou
     if let FrameLayer::Management(ref management_frame) = layer {
         let management_frame_layer = management_frame.next_layer().unwrap();
         match management_frame_layer {
-            ManagementFrameLayer::Beacon(ref BeaconFrame) => {
-                if BeaconFrame.version().into_u8() != 0 {
+            ManagementFrameLayer::Beacon(ref beacon_frame) => {
+                if beacon_frame.version().into_u8() != 0 {
                     println!("Frame version != 0, ignoring");
 
                     return;
                 }
-                match BeaconFrame.ssid() {
+                match beacon_frame.ssid() {
                     Some(v) => println!(
                         "Beacon for SSID: len {}, {}, {}",
                         v.len(),
                         String::from_utf8(v).unwrap(),
-                        BeaconFrame.addr2().to_hex_string()
+                        beacon_frame.addr2().to_hex_string()
                     ),
                     None => println!("Beacon without SSID"),
                 }
             }
-            ManagementFrameLayer::ProbeRequest(ref ProbeRequestFrame) => println!(
+            ManagementFrameLayer::ProbeRequest(ref probe_request_frame) => println!(
                 "ProbeRequest, SSID: {}",
-                String::from_utf8(ProbeRequestFrame.ssid().unwrap()).unwrap()
+                String::from_utf8(probe_request_frame.ssid().unwrap()).unwrap()
             ),
-            ManagementFrameLayer::ProbeResponse(ProbeResponseFrame) => println!("ProbeResponse"),
-            ManagementFrameLayer::Authentication(AuthenticationFrame) => println!("Authentication"),
-            ManagementFrameLayer::Deauthentication(DeauthenticationFrame) => {
+            ManagementFrameLayer::ProbeResponse(_probe_response_frame) => println!("ProbeResponse"),
+            ManagementFrameLayer::Authentication(_authentication_frame) => {
+                println!("Authentication")
+            }
+            ManagementFrameLayer::Deauthentication(_deauthentication_frame) => {
                 println!("Deauthentication")
             }
-            ManagementFrameLayer::Disassociate(DisassociateFrame) => println!("Disassociate"),
-            ManagementFrameLayer::AssociationRequest(AssociationRequestFrame) => {
+            ManagementFrameLayer::Disassociate(_disassociate_frame) => println!("Disassociate"),
+            ManagementFrameLayer::AssociationRequest(_association_request_frame) => {
                 println!("AssociationRequest")
             }
-            ManagementFrameLayer::AssociationResponse(AssociationResponseFrame) => {
+            ManagementFrameLayer::AssociationResponse(_association_response_frame) => {
                 println!("AssociationResponse")
             }
         }

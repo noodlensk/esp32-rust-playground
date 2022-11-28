@@ -2,7 +2,7 @@ use embedded_graphics::geometry::Point;
 use embedded_graphics::image::Image;
 use embedded_graphics::Drawable;
 
-use epd_waveshare::epd1in54_v2::*;
+use epd_waveshare::epd1in54_v2::{Display1in54, Epd1in54};
 use epd_waveshare::prelude::{RefreshLut, WaveshareDisplay};
 
 use esp_idf_hal::gpio::{Gpio10, Gpio19, Gpio9, Input, Output, PinDriver};
@@ -15,14 +15,16 @@ use esp_idf_hal::prelude::FromValueType;
 use esp_idf_hal::spi::{Dma, SpiDeviceDriver, SpiDriver};
 use esp_idf_hal::{delay, gpio, spi};
 
+type DisplayDevice<'a> = Epd1in54<
+    SpiDeviceDriver<'a, SpiDriver<'a>>,
+    PinDriver<'a, Gpio19, Input>,
+    PinDriver<'a, Gpio10, Output>,
+    PinDriver<'a, Gpio9, Output>,
+    Ets,
+>;
+
 pub struct Tamagothci<'a> {
-    display_device: Epd1in54<
-        SpiDeviceDriver<'a, SpiDriver<'a>>,
-        PinDriver<'a, Gpio19, Input>,
-        PinDriver<'a, Gpio10, Output>,
-        PinDriver<'a, Gpio9, Output>,
-        Ets,
-    >,
+    display_device: DisplayDevice<'a>,
     display_spi: SpiDeviceDriver<'a, SpiDriver<'a>>,
 }
 
@@ -51,7 +53,7 @@ impl<'a> Tamagothci<'a> {
         let dc = PinDriver::output(peripherals.pins.gpio10).unwrap();
         let busy = PinDriver::input(peripherals.pins.gpio19).unwrap();
 
-        let mut device = Epd1in54::new(&mut spi, busy, dc, rst, &mut delay).unwrap();
+        let device = Epd1in54::new(&mut spi, busy, dc, rst, &mut delay).unwrap();
 
         Tamagothci {
             display_device: device,
@@ -73,7 +75,7 @@ impl<'a> Tamagothci<'a> {
             .set_lut(&mut self.display_spi, Some(RefreshLut::Quick))
             .unwrap();
         self.display_device
-            .update_and_display_frame(&mut self.display_spi, &display.buffer(), &mut Ets)
+            .update_and_display_frame(&mut self.display_spi, display.buffer(), &mut Ets)
             .unwrap();
     }
 }
