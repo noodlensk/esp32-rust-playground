@@ -2,7 +2,7 @@
 target = "xtensa-esp32-espidf"
 [target.xtensa-esp32-espidf]
 linker = "ldproxy"
-runner = "espflash --monitor"
+runner = "espflash --monitor /dev/cu.usbserial-110"
 
 [unstable]
 

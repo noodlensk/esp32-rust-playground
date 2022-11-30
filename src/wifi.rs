@@ -1,17 +1,39 @@
-use esp_idf_sys::*;
-use ieee80211::*;
+use esp_idf_sys::{
+    c_types, esp, esp_event_send_internal, esp_netif_init, esp_wifi_init, esp_wifi_set_channel,
+    esp_wifi_set_mode, esp_wifi_set_promiscuous, esp_wifi_set_promiscuous_filter,
+    esp_wifi_set_promiscuous_rx_cb, esp_wifi_set_storage, esp_wifi_start,
+    g_wifi_default_wpa_crypto_funcs, g_wifi_feature_caps, g_wifi_osi_funcs, nvs_flash_init,
+    wifi_init_config_t, wifi_mode_t_WIFI_MODE_NULL, wifi_promiscuous_filter_t,
+    wifi_promiscuous_pkt_t, wifi_promiscuous_pkt_type_t, wifi_promiscuous_pkt_type_t_WIFI_PKT_CTRL,
+    wifi_promiscuous_pkt_type_t_WIFI_PKT_DATA, wifi_promiscuous_pkt_type_t_WIFI_PKT_MGMT,
+    wifi_promiscuous_pkt_type_t_WIFI_PKT_MISC, wifi_second_chan_t_WIFI_SECOND_CHAN_NONE,
+    wifi_storage_t_WIFI_STORAGE_RAM, CONFIG_ESP32_WIFI_DYNAMIC_RX_BUFFER_NUM,
+    CONFIG_ESP32_WIFI_STATIC_RX_BUFFER_NUM, CONFIG_ESP32_WIFI_TX_BUFFER_TYPE,
+    WIFI_AMPDU_RX_ENABLED, WIFI_AMPDU_TX_ENABLED, WIFI_AMSDU_TX_ENABLED, WIFI_CACHE_TX_BUFFER_NUM,
+    WIFI_CSI_ENABLED, WIFI_DEFAULT_RX_BA_WIN, WIFI_DYNAMIC_TX_BUFFER_NUM, WIFI_INIT_CONFIG_MAGIC,
+    WIFI_MGMT_SBUF_NUM, WIFI_NANO_FORMAT_ENABLED, WIFI_NVS_ENABLED, WIFI_PROMIS_FILTER_MASK_DATA,
+    WIFI_PROMIS_FILTER_MASK_MGMT, WIFI_SOFTAP_BEACON_MAX_LEN, WIFI_STATIC_TX_BUFFER_NUM,
+    WIFI_TASK_CORE_ID,
+};
+use ieee80211::{
+    Frame, FrameLayer, FrameTrait, MacAddress, ManagementFrameLayer, ManagementFrameTrait,
+    TaggedParametersTrait,
+};
+use lazy_static::lazy_static;
 use std::collections::HashMap;
+use std::sync::{Mutex, MutexGuard};
 
-#[allow(dead_code)]
-struct NetworkInfo {
-    ssid: &'static str,
-    mac: MacAddress,
+pub struct NetworkInfo {
+    pub ssid: String,
+    pub mac: MacAddress,
 }
 
-#[allow(dead_code)]
 pub struct WiFi {
     channel: u8,
-    known_networks: HashMap<&'static str, NetworkInfo>,
+}
+
+lazy_static! {
+    static ref KNOWN_NETWORKS: Mutex<HashMap<String, NetworkInfo>> = Mutex::new(HashMap::new());
 }
 
 impl WiFi {
@@ -41,10 +63,7 @@ impl WiFi {
             ))
             .unwrap();
         }
-        Self {
-            channel: ch,
-            known_networks: HashMap::new(),
-        }
+        Self { channel: ch }
     }
 
     pub fn set_channel(&mut self, ch: u8) {
@@ -54,7 +73,7 @@ impl WiFi {
                 ch,
                 wifi_second_chan_t_WIFI_SECOND_CHAN_NONE
             ))
-            .unwrap()
+            .unwrap();
         };
         self.channel = ch;
     }
@@ -68,10 +87,15 @@ impl WiFi {
 
         self.channel += 1;
     }
+
+    pub fn known_networks() -> MutexGuard<'static, HashMap<String, NetworkInfo>> {
+        KNOWN_NETWORKS.lock().unwrap()
+    }
 }
+
 #[allow(non_upper_case_globals)]
 pub extern "C" fn pkg_callback(buf: *mut c_types::c_void, type_: wifi_promiscuous_pkt_type_t) {
-    let pkg_type = match type_ {
+    let _pkg_type = match type_ {
         wifi_promiscuous_pkt_type_t_WIFI_PKT_MGMT => "MGMT",
         wifi_promiscuous_pkt_type_t_WIFI_PKT_CTRL => "CTRL",
         wifi_promiscuous_pkt_type_t_WIFI_PKT_MISC => "MISC",
@@ -94,53 +118,75 @@ pub extern "C" fn pkg_callback(buf: *mut c_types::c_void, type_: wifi_promiscuou
     let data = unsafe { pkt_data.payload.as_slice(pkt_length) };
     let frame = Frame::new(data);
 
-    println!(
-        "Got a pkg of type {} with length of {}bytes",
-        pkg_type,
-        pkt_data.rx_ctrl.sig_len()
-    );
+    if let Err(error) = callback(&frame) {
+        println!("Got error: {}", error);
+    }
+}
 
-    let layer = frame.next_layer().unwrap();
+fn callback(frame: &Frame) -> Result<(), String> {
+    let layer = match frame.next_layer() {
+        Some(layer) => layer,
+        None => return Err(String::from("get next layer from root")),
+    };
 
     if let FrameLayer::Management(ref management_frame) = layer {
-        let management_frame_layer = management_frame.next_layer().unwrap();
+        let management_frame_layer = match management_frame.next_layer() {
+            Some(layer) => layer,
+            None => return Err(String::from("get next layer from management")),
+        };
+
         match management_frame_layer {
             ManagementFrameLayer::Beacon(ref beacon_frame) => {
                 if beacon_frame.version().into_u8() != 0 {
-                    println!("Frame version != 0, ignoring");
-
-                    return;
+                    return Err(String::from("Frame version != 0, ignoring"));
                 }
+
                 match beacon_frame.ssid() {
-                    Some(v) => println!(
-                        "Beacon for SSID: len {}, {}, {}",
-                        v.len(),
-                        String::from_utf8(v).unwrap(),
-                        beacon_frame.addr2().to_hex_string()
-                    ),
+                    Some(v) => {
+                        let mac: String = beacon_frame.to_owned().addr2().to_hex_string();
+                        let ssid = match String::from_utf8(v) {
+                            Ok(string) => string,
+                            Err(e) => return Err(e.to_string()),
+                        };
+
+                        let mac_parsed = match MacAddress::parse_str(mac.as_str()) {
+                            Ok(mac) => mac,
+                            Err(e) => return Err(e.to_string()),
+                        };
+
+                        let key = mac_parsed.clone().to_hex_string();
+
+                        KNOWN_NETWORKS
+                            .lock()
+                            .unwrap()
+                            .entry(key)
+                            .or_insert(NetworkInfo {
+                                ssid,
+                                mac: mac_parsed,
+                            });
+                    }
                     None => println!("Beacon without SSID"),
                 }
             }
-            ManagementFrameLayer::ProbeRequest(ref probe_request_frame) => println!(
-                "ProbeRequest, SSID: {}",
-                String::from_utf8(probe_request_frame.ssid().unwrap()).unwrap()
-            ),
+            ManagementFrameLayer::ProbeRequest(_probe_request_frame) => println!("ProbeRequest"),
             ManagementFrameLayer::ProbeResponse(_probe_response_frame) => println!("ProbeResponse"),
             ManagementFrameLayer::Authentication(_authentication_frame) => {
-                println!("Authentication")
+                println!("Authentication");
             }
             ManagementFrameLayer::Deauthentication(_deauthentication_frame) => {
-                println!("Deauthentication")
+                println!("Deauthentication");
             }
             ManagementFrameLayer::Disassociate(_disassociate_frame) => println!("Disassociate"),
             ManagementFrameLayer::AssociationRequest(_association_request_frame) => {
-                println!("AssociationRequest")
+                println!("AssociationRequest");
             }
             ManagementFrameLayer::AssociationResponse(_association_response_frame) => {
-                println!("AssociationResponse")
+                println!("AssociationResponse");
             }
         }
     }
+
+    Ok(())
 }
 
 unsafe fn default_init_config() -> wifi_init_config_t {

@@ -21,7 +21,7 @@ embedded-hal = "1.0.0-alpha.9"
 epd-waveshare = { path = "../epd-waveshare" }
 display-interface-spi = { version = "0.4.1" }
 ieee80211 = { git = "https://github.com/SpiralP/rust-ieee80211", branch = "master" }
-
+lazy_static = "1.4.0"
 [build-dependencies]
 embuild = "0.30"
 anyhow = "1"
