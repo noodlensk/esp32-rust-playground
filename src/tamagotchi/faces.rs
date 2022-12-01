@@ -13,74 +13,77 @@ impl Faces {
 
         data.insert(
             "angry",
-            include_bytes!("../data/img/raw/angry.raw").to_vec(),
+            include_bytes!("../../data/img/raw/angry.raw").to_vec(),
         );
         data.insert(
             "awake",
-            include_bytes!("../data/img/raw/awake.raw").to_vec(),
+            include_bytes!("../../data/img/raw/awake.raw").to_vec(),
         );
         data.insert(
             "bored",
-            include_bytes!("../data/img/raw/bored.raw").to_vec(),
+            include_bytes!("../../data/img/raw/bored.raw").to_vec(),
         );
         data.insert(
             "broken",
-            include_bytes!("../data/img/raw/broken.raw").to_vec(),
+            include_bytes!("../../data/img/raw/broken.raw").to_vec(),
         );
-        data.insert("cool", include_bytes!("../data/img/raw/cool.raw").to_vec());
+        data.insert(
+            "cool",
+            include_bytes!("../../data/img/raw/cool.raw").to_vec(),
+        );
         data.insert(
             "debug",
-            include_bytes!("../data/img/raw/debug.raw").to_vec(),
+            include_bytes!("../../data/img/raw/debug.raw").to_vec(),
         );
         data.insert(
             "demotivated",
-            include_bytes!("../data/img/raw/demotivated.raw").to_vec(),
+            include_bytes!("../../data/img/raw/demotivated.raw").to_vec(),
         );
         data.insert(
             "excited",
-            include_bytes!("../data/img/raw/excited.raw").to_vec(),
+            include_bytes!("../../data/img/raw/excited.raw").to_vec(),
         );
         data.insert(
             "friend",
-            include_bytes!("../data/img/raw/friend.raw").to_vec(),
+            include_bytes!("../../data/img/raw/friend.raw").to_vec(),
         );
         data.insert(
             "grateful",
-            include_bytes!("../data/img/raw/grateful.raw").to_vec(),
+            include_bytes!("../../data/img/raw/grateful.raw").to_vec(),
         );
         data.insert(
             "happy",
-            include_bytes!("../data/img/raw/happy.raw").to_vec(),
+            include_bytes!("../../data/img/raw/happy.raw").to_vec(),
         );
         data.insert(
             "intense",
-            include_bytes!("../data/img/raw/intense.raw").to_vec(),
+            include_bytes!("../../data/img/raw/intense.raw").to_vec(),
         );
         data.insert(
             "lonely",
-            include_bytes!("../data/img/raw/lonely.raw").to_vec(),
+            include_bytes!("../../data/img/raw/lonely.raw").to_vec(),
         );
         data.insert(
             "look_l",
-            include_bytes!("../data/img/raw/look_l.raw").to_vec(),
+            include_bytes!("../../data/img/raw/look_l.raw").to_vec(),
         );
         data.insert(
             "look_l_happy",
-            include_bytes!("../data/img/raw/look_l_happy.raw").to_vec(),
+            include_bytes!("../../data/img/raw/look_l_happy.raw").to_vec(),
         );
         data.insert(
             "look_r",
-            include_bytes!("../data/img/raw/look_r.raw").to_vec(),
+            include_bytes!("../../data/img/raw/look_r.raw").to_vec(),
         );
         data.insert(
             "look_r_happy",
-            include_bytes!("../data/img/raw/look_r_happy.raw").to_vec(),
+            include_bytes!("../../data/img/raw/look_r_happy.raw").to_vec(),
         );
         data.insert(
             "motivated",
-            include_bytes!("../data/img/raw/motivated.raw").to_vec(),
+            include_bytes!("../../data/img/raw/motivated.raw").to_vec(),
         );
-        data.insert("sad", include_bytes!("../data/img/raw/sad.raw").to_vec());
+        data.insert("sad", include_bytes!("../../data/img/raw/sad.raw").to_vec());
 
         Self { data }
     }
