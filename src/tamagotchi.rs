@@ -1,6 +1,7 @@
 mod display;
 mod faces;
 mod wifi;
+mod rtc;
 
 use std::{thread, time};
 
@@ -15,13 +16,22 @@ pub struct Tamagothci<'a> {
     display: EInk<'a>,
     vib_motor_pin: PinDriver<'a, Gpio13, Output>,
     wifi: WiFi,
+    rtc: rtc::Rtc<'a>,
 }
 
 impl<'a> Tamagothci<'a> {
-    pub fn new() -> Self {
-        let peripherals = Peripherals::take().unwrap();
+    pub fn new() -> Result<Self, String> {
+        let peripherals = match Peripherals::take() {
+            Some(peripherals) => peripherals,
+            None => return Err(String::from("empty peripherals"))
+        };
 
-        Tamagothci {
+        let rtc = match rtc::Rtc::new(peripherals.i2c0, peripherals.pins.gpio21, peripherals.pins.gpio22) {
+            Ok(rtc) => rtc,
+            Err(error) => return Err(error)
+        };
+
+        Ok(Tamagothci {
             display: EInk::new(
                 peripherals.spi2,
                 peripherals.pins.gpio23,
@@ -33,10 +43,11 @@ impl<'a> Tamagothci<'a> {
             ),
             vib_motor_pin: PinDriver::output(peripherals.pins.gpio13).unwrap(),
             wifi: WiFi::new(),
-        }
+            rtc,
+        })
     }
 
-    pub fn redraw(&mut self) {
+    pub fn redraw(&mut self) -> Result<(), String> {
         self.wifi.next_channel();
 
         let known_networks = WiFi::known_networks();
@@ -45,8 +56,15 @@ impl<'a> Tamagothci<'a> {
             println!("{} {}", key, network.ssid);
         }
 
-        self.display.draw_random_face().unwrap();
-        self.vibrate_short();
+        let curr_time = match self.rtc.current_time() {
+            Ok(time) => time,
+            Err(error) => return Err(error),
+        };
+
+        match self.display.draw(curr_time) {
+            Ok(()) => Ok(()),
+            Err(error) => Err(error)
+        }
     }
 
     pub fn vibrate_short(&mut self) {

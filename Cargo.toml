@@ -18,10 +18,12 @@ esp-idf-hal = { version = "0.39.3" }
 dummy-pin = "0.1.1"
 embedded-graphics = "0.7.1"
 embedded-hal = "1.0.0-alpha.9"
+embedded-text = "0.5.0"
 epd-waveshare = { path = "../epd-waveshare" }
 display-interface-spi = { version = "0.4.1" }
 ieee80211 = { git = "https://github.com/SpiralP/rust-ieee80211", branch = "master" }
 lazy_static = "1.4.0"
+pcf8563= "0.1.2"
 [build-dependencies]
 embuild = "0.30"
 anyhow = "1"

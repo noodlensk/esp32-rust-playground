@@ -13,10 +13,10 @@ use std::{thread, time};
 fn main() {
     esp_idf_sys::link_patches();
 
-    let mut t = Tamagothci::new();
+    let mut t = Tamagothci::new().unwrap();
 
     loop {
-        t.redraw();
+        t.redraw().unwrap();
 
         thread::sleep(time::Duration::from_secs(10));
     }
