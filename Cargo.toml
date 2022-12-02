@@ -19,7 +19,7 @@ dummy-pin = "0.1.1"
 embedded-graphics = "0.7.1"
 embedded-hal = "1.0.0-alpha.9"
 embedded-text = "0.5.0"
-epd-waveshare = { path = "../epd-waveshare" }
+epd-waveshare = { git = "https://github.com/peckpeck/epd-waveshare", branch="hal1.0" }
 display-interface-spi = { version = "0.4.1" }
 ieee80211 = { git = "https://github.com/SpiralP/rust-ieee80211", branch = "master" }
 lazy_static = "1.4.0"

@@ -1,10 +1,10 @@
 use embedded_graphics::geometry::{Point, Size};
 use embedded_graphics::image::Image;
-use embedded_graphics::Drawable;
-use embedded_graphics::mono_font::ascii::{FONT_7X13_BOLD};
+use embedded_graphics::mono_font::ascii::FONT_7X13_BOLD;
 use embedded_graphics::mono_font::MonoTextStyle;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::primitives::Rectangle;
+use embedded_graphics::Drawable;
 
 use embedded_text::alignment::HorizontalAlignment;
 use embedded_text::style::{HeightMode, TextBoxStyleBuilder};
@@ -16,8 +16,8 @@ use epd_waveshare::prelude::{RefreshLut, WaveshareDisplay};
 
 use esp_idf_hal::delay::Ets;
 use esp_idf_hal::gpio::{Gpio10, Gpio18, Gpio19, Gpio23, Gpio5, Gpio9, Input, Output, PinDriver};
-use esp_idf_hal::spi::{Dma, SpiDeviceDriver, SpiDriver, SPI2};
 use esp_idf_hal::prelude::FromValueType;
+use esp_idf_hal::spi::{Dma, SpiDeviceDriver, SpiDriver, SPI2};
 use esp_idf_hal::{delay, gpio, spi};
 
 use pcf8563::DateTime;
@@ -57,7 +57,7 @@ impl<'a> EInk<'a> {
             Some(cs),
             &config,
         )
-            .unwrap();
+        .unwrap();
 
         let mut delay = delay::Ets;
 
@@ -122,7 +122,8 @@ impl<'a> EInk<'a> {
         let bounds = Rectangle::new(Point::zero(), Size::new(200, 0));
 
         // Create the text box and apply styling options.
-        let text_box = TextBox::with_textbox_style(text.as_str(), bounds, character_style, textbox_style);
+        let text_box =
+            TextBox::with_textbox_style(text.as_str(), bounds, character_style, textbox_style);
 
         // Draw the text box.
         if let Err(error) = text_box.draw(display) {

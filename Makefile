@@ -1,7 +1,7 @@
 lint: ## Run lint
-	cargo  clippy --all-targets -- -D warnings -A clippy::extra_unused_lifetimes
+	cargo  clippy --all-targets -- -D warnings
 lint-fix: ## Run lint and fix
-	cargo clippy --fix --all-targets --allow-dirty --allow-staged -- -D warnings -A clippy::extra_unused_lifetimes
+	cargo clippy --fix --all-targets --allow-dirty --allow-staged -- -D warnings
 build: ## Build
 	cargo build
 fmt: ## fmt
